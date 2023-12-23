@@ -1,0 +1,83 @@
+#!/bin/bash
+
+shopt -s extglob
+
+. ./lib/util
+. ./lib/search
+. ./lib/dl
+
+if [[ $# -eq 0 ]] || [[ "$1" =~ ^(h|-h|--h|help|-help|--help)$ ]]; then
+	PRINT_HELP ${@:1}
+	exit 0
+fi
+
+if [ -z "$LIBRARY_DIR" ]; then 
+	LIBRARY_DIR="$HOME/Music/bipp-music/"
+else
+	LIBRARY_DIR="${LIBRARY_DIR//\~/"$HOME"}"
+fi
+
+if [ -f ./bipp.conf ]; then
+	printf "Using config from program directory [$PWD] \n"
+	. ./bipp.conf
+elif [ -f $HOME/.config/bipp/bipp.conf ]; then
+	printf "Using config from user config directory [$HOME/.config/bipp.conf]\n"
+	. $HOME/.config/bipp/bipp.conf
+else
+	printf "No config found. Proceeding without\n"
+fi
+
+verbose=2
+dl='false'
+
+while getopts p:v: flag 
+do
+	case "${flag}" in
+		v) verbose=${OPTARG} 
+			shift 2;;
+		p) LIBRARY_DIR="${OPTARG}"
+			shift 2;;
+		*) echo 'Error in command line parsing' >&2
+			exit 1
+	esac
+done
+
+if [[ $# -gt 0 ]]
+then
+	case $1 in
+		$S_PATTERN)
+			;&
+		"search")
+			SEARCH $@
+			;;
+		*)
+			printf "Unrecognized command \"$1\". Exiting...\n"
+			exit 1
+
+	esac
+fi
+
+echo ""
+if ! [[ $dl = 'false' ]]
+then
+	DL_PROMPT
+	clip=$(dl_parse_list $dl_input)
+	while [[ $? -eq 1 ]]; do
+		printf "Could not parse input \'$dl_input\'. \n\n"
+		DL_PROMPT 'h'
+		clip=$(dl_parse_list $dl_input)
+	done
+	for link in ${clip}; do
+		if [[ ${link:0:1} = "!" ]]; then
+			clip=${clip//$link/}
+			clip=${clip//${link:1}/}
+		fi	
+	done
+	if [[ $clip = *( ) ]]; then
+		printf "No downloads selected. Exiting... \n"
+	else
+		printf "Downloading searched data... \n"
+		dl_list $clip
+	fi
+	exit 0
+fi
