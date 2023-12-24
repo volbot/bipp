@@ -160,7 +160,7 @@ SEARCH () {
 	local query_text=""; local query_type
 	while [[ $i -lt $(($#+1)) ]]; do
 		echo ${!i}
-		local prefix;
+		local prefix
 		case "${!i}" in
 			@($ALIAS_TRACK)) 
 				query_type="track"
