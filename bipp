@@ -17,7 +17,7 @@
 #    You should have received a copy of the GNU General Public License along 
 #    with this program. If not, see <https://www.gnu.org/licenses/>. 
 
-BIPP_VER='0.0.2'
+BIPP_VER='0.0.1'
 
 shopt -s extglob
 
@@ -541,7 +541,7 @@ fi
 verbose=2
 dl='false'
 
-while getopts Vp:v: flag 
+while getopts p:v:V flag 
 do
 	case "${flag}" in
 		V) 
