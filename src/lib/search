@@ -72,18 +72,18 @@ SEARCH_QUERY () {
 		elif [[ "$1" = "track" ]]; then 
 			local title=$(echo "$search" | jq -r ".title")
 			local artist=$(echo "$search" | jq -r ".artist.name")
-			local sec=$(echo "$search" | jq -r ".duration")
-			let local min=sec/60
-			let local temp=min*60
-			let local sec=sec-temp
-			if [[ $sec -lt 10 ]]; then printf -v sec "%02d" "$sec"; fi
+			local min; local sec;
+			sec=$(echo "$search" | jq -r ".duration")
+			printf -v min "%02d" $(( 10#$sec / 60 ))
+			printf -v sec "%02d" $(( 10#$min * -60 + 10#$sec ))
 			local album_title=$(echo "$search" | jq -r ".album.title")
 
 			printf -v line "%2d:" $i
 			printf -v line "${line} %s" "$(get_search_string "${title}" 23)"
 			printf -v line "${line} %s" "$(get_search_string "${artist}" 23)"
+				query+="/${search_type}"
 			printf -v line "${line} %s" "$(get_search_string "${album_title}" 23)"
-			printf -v line "${line} [%02d:%02d]" $min $sec
+			printf -v line "${line} [%s:%s]" $min $sec
 		fi
 		printf "$line \n"
 	done
@@ -96,8 +96,8 @@ SEARCH () {
 	local i=2
 	case "$1" in
 		$S_PATTERN)
-			if [[ $1 = S? ]]; then 
-				dl='true'; 
+			if [[ $1 = S? ]]; then
+				dl='true'
 			fi
 			if [[ $1 = ?[rat] ]]; then
 				case ${1:1:2} in
@@ -158,9 +158,9 @@ SEARCH () {
 
 	query+="$temp?q="
 	local query_text=""; local query_type
+	local prefix
 	while [[ $i -lt $(($#+1)) ]]; do
-		echo ${!i}
-		local prefix
+		unset prefix
 		case "${!i}" in
 			@($ALIAS_TRACK)) 
 				query_type="track"
@@ -176,7 +176,6 @@ SEARCH () {
 			*)
 				if [[ $query_text = "" ]]; then
 					query_type="$search_type"
-					prefix=""
 					((i--))
 				else
 					printf "Unrecognized filter type \"${!i}\". Exiting..." 
@@ -184,6 +183,9 @@ SEARCH () {
 				fi
 				;;
 		esac; ((i++))
+		if [[ $query_text = "" ]] && [[ $query_type != $search_type ]]; then
+			echo geep
+		fi
 		if [ -z ${prefix+x} ]; then
 			prefix="$query_type:"
 		fi

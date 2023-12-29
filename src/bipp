@@ -11,12 +11,6 @@ if [[ $# -eq 0 ]] || [[ "$1" =~ ^(h|-h|--h|help|-help|--help)$ ]]; then
 	exit 0
 fi
 
-if [ -z "$LIBRARY_DIR" ]; then 
-	LIBRARY_DIR="$HOME/Music/bipp-music/"
-else
-	LIBRARY_DIR="${LIBRARY_DIR//~/"$HOME"}"
-fi
-
 if [ -f ./bipp.conf ]; then
 	printf "Using config from program directory [$PWD] \n"
 	. ./bipp.conf
@@ -25,6 +19,12 @@ elif [ -f $HOME/.config/bipp/bipp.conf ]; then
 	. $HOME/.config/bipp/bipp.conf
 else
 	printf "No config found. Proceeding without\n"
+fi
+
+if [ -z "$LIBRARY_DIR" ]; then 
+	LIBRARY_DIR="$HOME/Music/bipp-music/"
+else
+	LIBRARY_DIR="${LIBRARY_DIR//\~/$HOME}"
 fi
 
 verbose=2
