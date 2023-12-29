@@ -1,3 +1,5 @@
+# Maintainer: Allomyrina Volbot
+
 pkgname=bipp
 pkgver=0.0.1
 pkgrel=1
@@ -8,7 +10,7 @@ license=('GPL')
 depends=('bash' 'deemix' 'curl')
 optdepends=('xdg-user-dirs: XDG directory support')
 makedepends=('git')
-source=("git+https://github.com/volbot/bipp.git#tag=v${pkgver}")
+source=("git+https://github.com/volbot/bipp.git")
 sha256sums=('SKIP')
 
 package() {
