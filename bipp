@@ -1,6 +1,32 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# indent type=tab
+# tab size=4
+#
+# Copyright 2023 Allomyrina Volbot (volbot333@gmail.com)
+
+#    This program is free software: you can redistribute it and/or modify it 
+#    under the terms of the GNU General Public License as published by the 
+#    Free Software Foundation, either version 3 of the License, or (at your 
+#    option) any later version.
+
+#    This program is distributed in the hope that it will be useful, but 
+#    WITHOUT ANY WARRANTY; without even the implied warranty of 
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+#    General Public License for more details.
+
+#    You should have received a copy of the GNU General Public License along 
+#    with this program. If not, see <https://www.gnu.org/licenses/>. 
+
+BIPP_VER='0.0.2'
 
 shopt -s extglob
+
+ALIAS_RECORD="r|record|album"
+ALIAS_ARTIST="a|artist"
+ALIAS_TRACK="t|track|song"
+QUERY_TYPES_STR="$ALIAS_RECORD|$ALIAS_ARTIST|$ALIAS_TRACK|label"
+QUERY_TYPES_INT="bpm_min|bpm_max|dur_min|dur_max"
+S_PATTERN="[sS]?([rat])"
 
 italic () { echo -e "\e[3m$1\e[0m"; }
 bold_strike() { echo -e "\e[9m\e[1m$1\e[0m"; }
@@ -16,12 +42,11 @@ for i in {1..7}; do
 	if [ $i -lt 5 ]; then DECOR+=("｡"); fi
 	if [ $i -lt 6 ]; then DECOR+=(" "); fi
 done
-DECOR_LEN=${#DECOR[@]}
 
 decor () {
 	val=""; for i in $(seq 1 $1); do 
-		printf -v val "%s%s" "$val" "${DECOR[$(($RANDOM%$DECOR_LEN))]}"
-       	done; echo "$val"; exit 0
+	printf -v val "%s%s" "$val" "${DECOR[$(($RANDOM%${#DECOR[@]}))]}"
+done; echo "$val"; exit 0
 }
 decor_fancy () {
 	echo "\e[3m\e[90m✴""$(decor $1)""✴\e[0m"
@@ -110,7 +135,7 @@ PRINT_HELP () {
 	printf "    $(bold "-//COMMANDS//-") \n"
 	printf "  $(bold "help") ""$(decor_fancy 9)"" print this dialog \n"
 	printf "  $(bold "search") ""$(decor_fancy 7)"" see $(bold "-//SEARCH//-") \n\n"
-	
+
 	printf "    $(bold "-//SEARCH//-") \n"
 	printf "  ... $(bold "search [")"
 	printf "$(bold_italic "dl")$(bold "] [")"
@@ -147,13 +172,6 @@ PRINT_HELP () {
 
 	printf "\n"
 }
-
-ALIAS_RECORD="r|record|album"
-ALIAS_ARTIST="a|artist"
-ALIAS_TRACK="t|track|song"
-QUERY_TYPES_STR="$ALIAS_RECORD|$ALIAS_ARTIST|$ALIAS_TRACK|label"
-QUERY_TYPES_INT="bpm_min|bpm_max|dur_min|dur_max"
-S_PATTERN="[sS]?([rat])"
 
 get_search_string () {
 	local in="$1"
@@ -229,7 +247,7 @@ SEARCH_QUERY () {
 			printf -v line "%2d:" $i
 			printf -v line "${line} %s" "$(get_search_string "${title}" 23)"
 			printf -v line "${line} %s" "$(get_search_string "${artist}" 23)"
-				query+="/${search_type}"
+			query+="/${search_type}"
 			printf -v line "${line} %s" "$(get_search_string "${album_title}" 23)"
 			printf -v line "${line} [%s:%s]" $min $sec
 		fi
@@ -331,9 +349,6 @@ SEARCH () {
 				fi
 				;;
 		esac; ((i++))
-		if [[ $query_text = "" ]] && [[ $query_type != $search_type ]]; then
-			echo geep
-		fi
 		if [ -z ${prefix+x} ]; then
 			prefix="$query_type:"
 		fi
@@ -483,23 +498,42 @@ DL_PROMPT () {
 	fi
 }
 
+get_config_folder () {
+	if ! [ -z "$HOME" ]; then
+		echo "$HOME/.config"
+		exit 0
+	else
+		echo "."
+		exit 0
+	fi
+}
+
 if [[ $# -eq 0 ]] || [[ "$1" =~ ^(h|-h|--h|help|-help|--help)$ ]]; then
 	PRINT_HELP ${@:1}
 	exit 0
 fi
 
+
 if [ -f ./bipp.conf ]; then
 	printf "Using config from program directory [$PWD] \n"
 	. ./bipp.conf
-elif [ -f $HOME/.config/bipp/bipp.conf ]; then
-	printf "Using config from user config directory [$HOME/.config/bipp.conf]\n"
-	. $HOME/.config/bipp/bipp.conf
 else
-	printf "No config found. Proceeding without\n"
+	CONFIG_FOLDER=$(get_config_folder)
+	if [ -f "$CONFIG_FOLDER/bipp/bipp.conf" ]; then
+	printf "Using config from user config directory [$HOME/.config/bipp.conf]\n"
+	. "$CONFIG_FOLDER/bipp/bipp.conf"
+	else
+		printf "No config found. Proceeding without\n"
+	fi
 fi
 
 if [ -z "$LIBRARY_DIR" ]; then 
-	LIBRARY_DIR="$HOME/Music/bipp-music/"
+	if command -v xdg-user-dir; then
+		LIBRARY_DIR="$(xdg-user-dir MUSIC)"
+	else
+		LIBRARY_DIR="$HOME/Music"
+	fi
+	LIBRARY_DIR+="/bipp-music/"
 else
 	LIBRARY_DIR="${LIBRARY_DIR//\~/$HOME}"
 fi
@@ -507,9 +541,13 @@ fi
 verbose=2
 dl='false'
 
-while getopts p:v: flag 
+while getopts Vp:v: flag 
 do
 	case "${flag}" in
+		V) 
+			printf "\n  $(bold "bipp version:") ${BIPP_VER} alpha"
+			printf "\n $(italic '"i can make you feel better!"')\n"
+			exit 0;;
 		v) verbose=${OPTARG} 
 			shift 2;;
 		p) LIBRARY_DIR="${OPTARG}"
@@ -545,7 +583,7 @@ then
 		clip=$(dl_parse_list $dl_input)
 	done
 	for link in ${clip}; do
-		if [[ ${link:0:1} = "!" ]]; then
+		if [[ ${link:0:1} = '!' ]]; then
 			clip=${clip//$link/}
 			clip=${clip//${link:1}/}
 		fi	
