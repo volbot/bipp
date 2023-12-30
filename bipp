@@ -23,8 +23,9 @@ shopt -s extglob
 
 ALIAS_RECORD="r|record|album"
 ALIAS_ARTIST="a|artist"
-ALIAS_TRACK="t|track|song"
-QUERY_TYPES_STR="$ALIAS_RECORD|$ALIAS_ARTIST|$ALIAS_TRACK|label"
+ALIAS_LABEL="l|label"
+ALIAS_TRACK="t|track"
+QUERY_TYPES_STR="$ALIAS_RECORD|$ALIAS_ARTIST|$ALIAS_TRACK|$ALIAS_LABEL"
 QUERY_TYPES_INT="bpm_min|bpm_max|dur_min|dur_max"
 S_PATTERN="[sS]?([rat])"
 
@@ -37,510 +38,546 @@ color_gray() { echo -e "\e[90m$1\e[0m"; }
 
 DECOR=()
 for i in {1..7}; do
-	if [ $i -lt 2 ]; then DECOR+=("☾" "☁︎"); fi
-	if [ $i -lt 4 ]; then DECOR+=("⋆" "ﾟ"); fi
-	if [ $i -lt 5 ]; then DECOR+=("｡"); fi
-	if [ $i -lt 6 ]; then DECOR+=(" "); fi
+    if [ $i -lt 2 ]; then DECOR+=("☾" "☁︎"); fi
+    if [ $i -lt 4 ]; then DECOR+=("⋆" "ﾟ"); fi
+    if [ $i -lt 5 ]; then DECOR+=("｡"); fi
+    if [ $i -lt 6 ]; then DECOR+=(" "); fi
 done
 
 decor () {
-	val=""; for i in $(seq 1 $1); do 
-	printf -v val "%s%s" "$val" "${DECOR[$(($RANDOM%${#DECOR[@]}))]}"
+    val=""; for i in $(seq 1 $1); do 
+    printf -v val "%s%s" "$val" "${DECOR[$(($RANDOM%${#DECOR[@]}))]}"
 done; echo "$val"; exit 0
 }
 decor_fancy () {
-	echo "\e[3m\e[90m✴""$(decor $1)""✴\e[0m"
+    echo "\e[3m\e[90m✴""$(decor $1)""✴\e[0m"
 }
 
 parse_until () {
-	local offset=2
-	let local index=${offset}+$1
-	local dln="$2"; local query_text="${!index}"
+    local offset=2
+    let local index=${offset}+$1
+    local dln="$2"; local query_text="${!index}"
 
-	((index++))
-	while ! [[ "${!index}" =~ ^(${dln})$ ]]; do
-		if [[ $[index] -gt $# ]]; then break 1; fi
-		local query_text="$query_text%20${!index}"
-		((index++))
-	done
+    ((index++))
+    while ! [[ "${!index}" =~ ^(${dln})$ ]]; do
+        if [[ $[index] -gt $# ]]; then break 1; fi
+        local query_text="$query_text%20${!index}"
+        ((index++))
+    done
 
-	echo $query_text
-	let local ret=${index}-${offset}
-	return $ret
+    echo $query_text
+    let local ret=${index}-${offset}
+    return $ret
 }
 
 parse_2_digit () {
-	if [[ ${1:1:2} = '' ]]; then
-		echo ${1:0:1}
-		exit 0
-	fi
-	if [[ $1 = [0-9][-,] ]]; then
-		echo ${1:0:1}
-		exit 0
-	else
-		echo ${1:0:2}
-		exit 1
-	fi
+    if [[ ${1:1:2} = '' ]]; then
+        echo ${1:0:1}
+        exit 0
+    fi
+    if [[ $1 = [0-9][-,] ]]; then
+        echo ${1:0:1}
+        exit 0
+    else
+        echo ${1:0:2}
+        exit 1
+    fi
 }
 
 volcurl () {
-	if [[ "$verbose" -gt 2 ]]
-	then
-		echo ""
-		local json=$(curl $1)
-	else
-		local json=$(curl -s $1)
-	fi
-	echo $json
+    if [[ "$verbose" -gt 2 ]]
+    then
+        echo ""
+        local json=$(curl $1)
+    else
+        local json=$(curl -s $1)
+    fi
+    echo $json
+}
+
+PRINT_LOGO () {
+    printf "$(bold "✴")"
+    printf "$(italic "$(decor 3)")"
+    printf "$(bold "|‾|")"
+    printf "$(italic "$(decor 3)")"
+    printf "$(bold "_")"
+    printf "$(italic "$(decor 39)")"
+    printf "$(bold "✴\n")"
+
+    printf "$(bold "    | |  /_\           \n")"
+    printf "$(bold "    | |_  _ __ _ __ _	   ")$(italic "package manager for\n")"
+    printf "$(bold "    | '_ \ | '_ \ '_ \ 	   ")$(italic "your music library.\n")"
+    printf "$(bold "    |_.__/_| .__/ .__/ 	   ")$(italic "with <3, allomyrina\n")"
+    printf "$(bold "           | |  | |     \n")"
+
+    printf "$(bold "✴")"
+    printf "$(italic "$(decor 10)")"
+    printf "$(bold "|_|")"
+    printf "$(italic "$(decor 2)")"
+    printf "$(bold "|_|")"
+    printf "$(italic "$(decor 31)")"
+    printf "$(bold "✴\n")"
+}
+
+PRINT_HELP_SEC () {
+    case $1 in
+        bipp)
+            printf "                   ┌─────────────────────────┐\n"
+            printf " ┌─────────────────┤$(italic '$bipp help bipp') to repeat│\n"
+            printf " │                 └─────────────────────────┘\n"  
+            printf " b   $(bold 'USAGE: bipp [')$(bold_italic 'BIPP_ARGS')$(bold '] ')$(bold_italic '<command>')$(bold ' [')$(bold_italic 'COMMAND_PARAMS')$(bold ']') \n i\n"
+            printf " p     $(bold '-//BIPP_ARGS//-') \n"
+            printf " p   $(bold '-V') $(decor_fancy 16) print version and exit \n"
+            printf " │   $(bold '-p|P <path>') $(decor_fancy 7) specify download location \n"
+            printf " │                            lowercase to generate <path>/bipp_music/ \n"
+            printf " │   $(bold '-v <verbosity>') $(decor_fancy 4) specify amount of output \n"
+            printf " │                            0 = silent \n"
+            printf " │                            1 = command output only \n"
+            printf " │                            2 = deemix progress \n"
+            printf " │                            3 = everything \n │ \n"
+            printf " │     $(bold '-//COMMANDS//-') \n"
+            printf " │   $(bold 'h|help [section]') $(decor_fancy 4) print help dialog, or help section if specified \n"
+            printf " │                              sections: $(italic 'bipp')|$(italic 'search')|$(italic 'alias')|$(italic 'ex')|$(italic 'dl') \n"
+            printf " │   $(bold 'search') $(decor_fancy 14) search for, and optionally download, remote music. \n"
+            printf " └                              $(italic '$bipp help search') for more info \n"
+            ;;
+        search)
+            printf "                      ┌───────────────────────────┐\n"
+            printf " ┌──────$(bold '//SEARCH//')────┤$(italic '$bipp help search') to repeat│\n"
+            printf " │                    └───────────────────────────┘\n"  
+            printf " s   ... $(bold "search [")$(bold_italic "dl")$(bold "] <")$(bold_italic "type")$(bold "> <")$(bold_italic "param1, param2,...")$(bold "> ")\n"
+            printf " e   $(bold "dl") $(decor_fancy 7) include to download results \n"
+            printf " a                   ex: bipp search $(italic "dl") track KKona Man\n"
+            printf " r                      downloads tracks called KKona Man \n"
+            printf " c   $(bold "type") $(decor_fancy 5) (track|album|artist) \n"
+            printf " h   $(bold "param") $(decor_fancy 4) filter predicate \n"
+            printf " │                   of form: <$(italic "type")> <$(italic "value")>, where: \n"
+            printf " │                      type: (artist|album|track|label|$(color_red "dur_min")|$(color_red "dur_max")|$(color_red "bpm_min")|$(color_red "bpm_max")) \n"
+            printf " │                      query: search string \n"
+            printf " │                   ex: bipp st $(italic "album Beam Me Up Scotty artist gucci") \n"
+            printf " └                      displays tracks by Gucci Mane on albums called Beam Me Up Scotty \n"
+            ;;
+        alias)
+            printf "                       ┌──────────────────────────┐\n"
+            printf " ┌──────$(bold '//ALIASES//')────┤$(italic '$bipp help alias') to repeat│\n"
+            printf " │                     └──────────────────────────┘\n"  
+            printf " a   $(bold "$ALIAS_RECORD") $(decor_fancy 4) record \n"
+            printf " l   $(bold "$ALIAS_ARTIST") $(decor_fancy 10) artist \n"
+            printf " i   $(bold "$ALIAS_TRACK") $(decor_fancy 11) track \n"
+            printf " a   $(bold "$ALIAS_LABEL") $(decor_fancy 11) label \n │\n"
+            printf " s   $(bold '<s|S>[r|a|t]') $(decor_fancy 6) shorthand for $(bold 'search [')$(bold_italic 'dl')$(bold '] <')$(bold_italic 'type')$(bold '>')\n"
+            printf " │                            usage:\n"
+            printf " │                               s|S $(decor_fancy 6) dl (caps for true) \n"
+            printf " │                               r|a|t $(decor_fancy 4) search type (see above) \n"
+            printf " │                         ex: bipp $(italic 'sr') 100 gecs\n"
+            printf " │                            displays albums called \"100 gecs\"\n"
+            printf " │                         ex: bipp $(italic 'St') artist Ana Frango\n"
+            printf " └                            downloads tracks by artist \"Ana Frango\"\n"
+            ;;
+        ex)
+            printf "                        ┌───────────────────────┐\n"
+            printf " ┌──────$(bold '//EXAMPLES//')────┤$(italic '$bipp help ex') to repeat│\n"
+            printf " │                      └───────────────────────┘\n"  
+            printf " e   $(italic '$bipp search track BIPP artist SOPHIE') \n"
+            printf " x   $(italic '↳bipp st BIPP a SOPHIE') \n"
+            printf " │      displays songs called BIPP by SOPHIE \n │\n"
+            printf " │   $(italic '$bipp search dl track artist MC Boing album Harlecore') \n"
+            printf " │   $(italic '↳bipp St a MC Boing r Harlecore') \n"
+            printf " │      downloads songs by MC Boing on albums called Harlecore \n │\n"
+            printf " │   $(italic '$bipp -v 0 search dl artist Frank Ocean label Blonded \n')"
+            printf " │   $(italic '↳bipp -v 0 Sa Frank Ocean l Blonded \n')"
+            printf " └      silently downloads music by Frank Ocean, published by Blonded \n"
+            ;;
+        dl)
+            printf "                         ┌───────────────────────┐\n"
+            printf " ┌──────$(bold '//SEARCH-DL//')────┤$(italic '$bipp help dl') to repeat│\n"
+            printf " │                       └───────────────────────┘\n"  
+            printf " d   Enter the indices of the results you'd like to download\n"
+                printf " l   in the form of a space-separated list. \n │\n"
+            printf " │       $(bold 'SHORTHAND')\n"
+            printf " │    $(bold 'SYNTAX       USAGE             EXAMPLE')\n"
+            printf " │   'x' $(decor_fancy 6) number $(decor_fancy 8) '9 10 21' downloads the 9th, 10th, and 21st search result.\n"
+            printf " │   'x-y' $(decor_fancy 4) range $(decor_fancy 9) '1-10' downloads the top 10 search results.\n"
+            printf " │   '!x' $(decor_fancy 5) negation $(decor_fancy 6) '@ !13 !4' downloads all but the 4th and 13th search results.\n"
+            printf " │   '@' $(decor_fancy 6) everything $(decor_fancy 4) '@' downloads all search results.\n │\n"
+            printf " │       $(bold "TIPS")\n"
+            printf " │   • Shorthand can compound to meet most tasks. For example, \n"
+            printf " │       '@ !2-4' downloads all results except the 2nd, 3rd, and 4th.\n"
+            printf " │   • If you didn't find what you were looking for, you can always use 'CTRL-C' to quit.\n"
+            printf " └   • Reminders for the shorthand are shown on the download prompt. \n"
+            printf "\n"
+            ;;
+    esac
 }
 
 PRINT_HELP () {
-	printf "$(bold "✴")"
-	printf "$(italic "$(decor 3)")"
-	printf "$(bold "|‾|")"
-	printf "$(italic "$(decor 3)")"
-	printf "$(bold "_")"
-	printf "$(italic "$(decor 39)")"
-	printf "$(bold "✴\n")"
+    
+    PRINT_LOGO; echo ""
+    
+    if [[ "$2" = @(bipp|search|alias|ex|dl) ]]; then
+            PRINT_HELP_SEC "$2"; echo ""
+            exit 0
+    fi
 
-	printf "$(bold "    | |  /_\           \n")"
-	printf "$(bold "    | |_  _ __ _ __ _	   ")$(italic "package manager for\n")"
-	printf "$(bold "    | '_ \ | '_ \ '_ \ 	   ")$(italic "your music library.\n")"
-	printf "$(bold "    |_.__/_| .__/ .__/ 	   ")$(italic "with <3, allomyrina\n")"
-	printf "$(bold "           | |  | |     \n")"
+    PRINT_HELP_SEC 'bipp'; echo ""
+    PRINT_HELP_SEC 'search'; echo ""
+    PRINT_HELP_SEC 'ex'; echo ""
 
-	printf "$(bold "✴")"
-	printf "$(italic "$(decor 10)")"
-	printf "$(bold "|_|")"
-	printf "$(italic "$(decor 2)")"
-	printf "$(bold "|_|")"
-	printf "$(italic "$(decor 31)")"
-	printf "$(bold "✴\n\n")"
-
-	printf " $(bold "USAGE: bipp [")"
-	printf "$(bold_italic "BIPP_ARGS")"
-	printf "$(bold "]")"
-	printf " $(bold_italic "<command>")"
-	printf "$(bold " [")"
-	printf "$(bold_italic "COMMAND_PARAMS")] \n\n"
-
-	printf "    $(bold "-//BIPP_ARGS//-") \n"
-	printf "  $(bold "-V") ""$(decor_fancy 19)"" print version and exit \n"
-	printf "  $(bold "-p|P <path>") ""$(decor_fancy 10)"" specify download location \n"
-	printf "                              lowercase to generate <path>/bipp_music/ \n"
-	printf "  $(bold "-v <verbosity>") ""$(decor_fancy 7)"" specify amount of output \n"
-	printf "                              0 = silent \n"
-	printf "                              1 = command output only \n"
-	printf "                              2 = deemix progress \n"
-	printf "                              3 = everything \n\n"
-
-	printf "    $(bold "-//COMMANDS//-") \n"
-	printf "  $(bold "help") ""$(decor_fancy 9)"" print this dialog \n"
-	printf "  $(bold "search") ""$(decor_fancy 7)"" see $(bold "-//SEARCH//-") \n\n"
-
-	printf "    $(bold "-//SEARCH//-") \n"
-	printf "  ... $(bold "search [")"
-	printf "$(bold_italic "dl")$(bold "] [")"
-	printf "$(bold_italic "type")$(bold "] <")"
-	printf "$(bold_italic "param1, param2,...")$(bold "> ")\n"
-	printf "  $(bold "dl") ""$(decor_fancy 10)"" include to download results \n"
-	printf "                     ex: bipp search $(italic "dl") track KKona Man\n"
-	printf "                        downloads tracks called KKona Man \n"
-	printf "  $(bold "type") ""$(decor_fancy 8)"" (track|album|artist) \n"
-	printf "  $(bold "param") ""$(decor_fancy 7)"" filter predicate \n"
-    printf "                     of form: <$(italic "type")> <$(italic "value")>, where: \n"
-	printf "                        type: (artist|album|track|label|$(color_red "dur_min")|$(color_red "dur_max")|$(color_red "bpm_min")|$(color_red "bpm_max")) \n"
-	printf "                        query: search string \n"
-	printf "                     ex: bipp st $(italic "album Beam Me Up Scotty artist gucci") \n"
-	printf "                        displays tracks by Gucci Mane on albums called Beam Me Up Scotty \n\n"
-
-	printf "    $(bold "-//ALIASES//-") \n"
-	printf "  $(bold "h|-h|--h|help|-help|--help") ""$(decor_fancy 7)"" take a guess	\n"
-	printf "  $(bold "<s|S>[r|a|t]") ""$(decor_fancy 21)"" shorthand for $(bold "search") \n"
-	printf "                                          key: \n"
-	printf "                                             's'= search   'S' = search dl \n"
-	printf "                                             'r'= album    'a' = artist \n"
-	printf "                                             't'= track \n"
-	printf "                                          ex: bipp $(italic "sr") 100 gecs\n"
-    printf "                                             displays albums called \"100 gecs\"\n"
-	printf "                                          ex: bipp $(italic "St") artist Ana Frango\n"
-    printf "                                             downloads tracks by artist \"Ana Frango\"\n\n"
-
-
-	printf "    $(bold "-//EXAMPLES//-") \n"
-	printf "  $(italic "\$bipp search track BIPP artist SOPHIE") \n"
-	printf "     displays songs called BIPP by SOPHIE \n"
-	printf "  $(italic "\$bipp search dl track artist MC Boing album Harlecore") \n"
-	printf "     downloads songs by MC Boing on albums called Harlecore \n"
-	printf "  $(italic "\$bipp -v 0 Sa a Frank Ocean label Blonded \n")"
-	printf "     silently downloads albums by Frank Ocean, published by Blonded \n"
-
-	printf "\n"
+    printf "\n"
 }
 
 get_search_string () {
-	local in="$1"
-	if [[ ${#in} -gt $2 ]]; then in="${in:0:$(($2 - 3))}..."; fi
-	local str="$(decor_fancy $(( $(($2 + 3)) - ${#in} )))"
-	echo "$in $str"	
+    local in="$1"
+    if [[ ${#in} -gt $2 ]]; then in="${in:0:$(($2 - 3))}..."; fi
+    local str="$(decor_fancy $(( $(($2 + 3)) - ${#in} )))"
+    echo "$in $str"	
 }
 
 SEARCH_QUERY () {
-	local json=$(volcurl "$2")
+    local json=$(volcurl "$2")
 
-	search_total=$(echo "${json}" | jq -r ".total")
-	if [[ $search_total -eq 0 ]]; then
-		printf "No results found \n"
-		exit 1
-	fi
-	if [[ $dl != 'false' ]]; then
-		dl_id=()
-	fi
-	local i=0
-	if [[ $verbose -gt 0 ]]; then
-		local pad="                             "
-		if [[ "$1" = "album" ]]; then
-			printf "%.5s%s%.19s%s%.19s%s\n" "$pad" "$(bold "album title")" "$pad" "$(bold "artist name")" "$pad" "$(bold "information")"
-		elif [[ "$1" = "artist" ]]; then 
-			printf "%.5s%s%.19s%s\n" "$pad" "$(bold "artist name")" "$pad" "$(bold "albums")"
-		elif [[ "$1" = "track" ]]; then 
-			printf "%.5s%s%.19s%s%.19s%s%.19s%s\n" "$pad" "$(bold "track title")" "$pad" "$(bold "artist name")" "$pad" "$(bold "album title")" "$pad" "$(bold "time")"
-		fi
-	fi
-	while [[ $i -lt $search_total ]]; do
-		local search=$(echo "${json}" | jq -r ".data[${i}]");((i++))
-		if [[ $search = "null" ]]; then break 1; fi
-		if [[ $dl != 'false' ]]; then
-			local id=$(echo "$search" | jq -r ".id")
-			dl_id+=( "https://www.deezer.com/$1/$id" )
-		fi
+    search_total=$(echo "${json}" | jq -r ".total")
+    if [[ $search_total -eq 0 ]]; then
+        printf "No results found \n"
+        exit 1
+    fi
+    if [[ $dl != 'false' ]]; then
+        dl_id=()
+    fi
+    local i=0
+    if [[ $verbose -gt 0 ]]; then
+        local pad="                             "
+        if [[ "$1" = "album" ]]; then
+            printf "%.5s%s%.19s%s%.19s%s\n" "$pad" "$(bold "album title")" "$pad" "$(bold "artist name")" "$pad" "$(bold "information")"
+        elif [[ "$1" = "artist" ]]; then 
+            printf "%.5s%s%.19s%s\n" "$pad" "$(bold "artist name")" "$pad" "$(bold "albums")"
+        elif [[ "$1" = "track" ]]; then 
+            printf "%.5s%s%.19s%s%.19s%s%.19s%s\n" "$pad" "$(bold "track title")" "$pad" "$(bold "artist name")" "$pad" "$(bold "album title")" "$pad" "$(bold "time")"
+        fi
+    fi
+    while [[ $i -lt $search_total ]]; do
+        local search=$(echo "${json}" | jq -r ".data[${i}]");((i++))
+        if [[ $search = "null" ]]; then break 1; fi
+        if [[ $dl != 'false' ]]; then
+            local id=$(echo "$search" | jq -r ".id")
+            dl_id+=( "https://www.deezer.com/$1/$id" )
+        fi
 
-		if [[ "$verbose" -eq 0 ]]; then continue 1; fi
-		local line
-		if [[ "$1" = "album" ]]; then
-			local title=$(echo "$search" | jq -r ".title")
-			local artist=$(echo "$search" | jq -r ".artist.name")
-			local type=$(echo "$search" | jq -r ".record_type")
-			local nb_tracks=$(echo "$search" | jq -r ".nb_tracks")
-			local explicit=$(echo "$search" | jq -r ".explicit_lyrics")
+        if [[ "$verbose" -eq 0 ]]; then continue 1; fi
+        local line
+        if [[ "$1" = "album" ]]; then
+            local title=$(echo "$search" | jq -r ".title")
+            local artist=$(echo "$search" | jq -r ".artist.name")
+            local type=$(echo "$search" | jq -r ".record_type")
+            local nb_tracks=$(echo "$search" | jq -r ".nb_tracks")
+            local explicit=$(echo "$search" | jq -r ".explicit_lyrics")
 
-			printf -v line "$(bold "%2d:")" $i
-			printf -v line "${line} %s" "$(get_search_string "${title}" 23)"
-			printf -v line "${line} %s" "$(get_search_string "${artist}" 23)"
-			printf -v line "${line} [$type; $nb_tracks tracks]"
-			if [[ $explicit = 'true' ]]; then
-				local x=$(( 7 - ${#type} ))
-				x=$(( x + 2 - ${#nb_tracks} ))
-				printf -v line "${line} %.*s[Explicit]" $x "         "
-			fi
-		elif [[ "$1" = "artist" ]]; then 
-			local name=$(echo "$search" | jq -r ".name")
-			local nb_album=$(echo "$search" | jq -r ".nb_album")
+            printf -v line "$(bold "%2d:")" $i
+            printf -v line "${line} %s" "$(get_search_string "${title}" 23)"
+            printf -v line "${line} %s" "$(get_search_string "${artist}" 23)"
+            printf -v line "${line} [$type; $nb_tracks tracks]"
+            if [[ $explicit = 'true' ]]; then
+                local x=$(( 7 - ${#type} ))
+                x=$(( x + 2 - ${#nb_tracks} ))
+                printf -v line "${line} %.*s[Explicit]" $x "         "
+            fi
+        elif [[ "$1" = "artist" ]]; then 
+            local name=$(echo "$search" | jq -r ".name")
+            local nb_album=$(echo "$search" | jq -r ".nb_album")
 
-			printf -v line "%2d:" $i
-			printf -v line "${line} %s" "$(get_search_string "${name}" 23)"
-			printf -v line "${line} [$nb_album albums]"
-		elif [[ "$1" = "track" ]]; then 
-			local title=$(echo "$search" | jq -r ".title")
-			local artist=$(echo "$search" | jq -r ".artist.name")
-			local min; local sec;
-			sec=$(echo "$search" | jq -r ".duration")
-			printf -v min "%02d" $(( 10#$sec / 60 ))
-			printf -v sec "%02d" $(( 10#$min * -60 + 10#$sec ))
-			local album_title=$(echo "$search" | jq -r ".album.title")
+            printf -v line "%2d:" $i
+            printf -v line "${line} %s" "$(get_search_string "${name}" 23)"
+            printf -v line "${line} [$nb_album albums]"
+        elif [[ "$1" = "track" ]]; then 
+            local title=$(echo "$search" | jq -r ".title")
+            local artist=$(echo "$search" | jq -r ".artist.name")
+            local min; local sec;
+            sec=$(echo "$search" | jq -r ".duration")
+            printf -v min "%02d" $(( 10#$sec / 60 ))
+            printf -v sec "%02d" $(( 10#$min * -60 + 10#$sec ))
+            local album_title=$(echo "$search" | jq -r ".album.title")
 
-			printf -v line "%2d:" $i
-			printf -v line "${line} %s" "$(get_search_string "${title}" 23)"
-			printf -v line "${line} %s" "$(get_search_string "${artist}" 23)"
-			query+="/${search_type}"
-			printf -v line "${line} %s" "$(get_search_string "${album_title}" 23)"
-			printf -v line "${line} [%s:%s]" $min $sec
-		fi
-		printf "$line \n"
-	done
+            printf -v line "%2d:" $i
+            printf -v line "${line} %s" "$(get_search_string "${title}" 23)"
+            printf -v line "${line} %s" "$(get_search_string "${artist}" 23)"
+            query+="/${search_type}"
+            printf -v line "${line} %s" "$(get_search_string "${album_title}" 23)"
+            printf -v line "${line} [%s:%s]" $min $sec
+        fi
+        printf "$line \n"
+    done
 }
 
 SEARCH () {
-	#PARSING STAGE
-	local query="https://api.deezer.com/search"
-	local search_type="none"
-	local i=2
-	case "$1" in
-		$S_PATTERN)
-			if [[ $1 = S? ]]; then
-				dl='true'
-			fi
-			if [[ $1 = ?[rat] ]]; then
-				case ${1:1:2} in
-					r)
-						search_type="album"	
-						query+="/${search_type}"
-						;;
-					a)
-						search_type="artist"
-						query+="/${search_type}"
-						;;
-					t)
-						search_type="track"
-						;;
-				esac
-			fi
-			;;
-		!('search')) echo "You aren't supposed to be here."; exit 1
-	esac
-	local temp=""
-	while [[ 1 -eq 1 ]]; do
-		case "${!i}" in
-			dl) 		dl='true';;
-			i+([0-9])) 	temp+="&index="${!i:1};;
-			l+([0-9])) 	temp+="&limit="${!i:1};;
-			*) 		break 1;;
-		esac
-		((i++))
-	done
-	if [[ $search_type = "none" ]]; then
-		case "${!i}" in
-			@($ALIAS_RECORD)) 
-				search_type="album"	
-				query+="/${search_type}"
-				;;
+    #PARSING STAGE
+    local query="https://api.deezer.com/search"
+    local search_type="none"
+    local i=2
+    case "$1" in
+        $S_PATTERN)
+            if [[ $1 = S? ]]; then
+                dl='true'
+            fi
+            if [[ $1 = ?[rat] ]]; then
+                case ${1:1:2} in
+                    r)
+                        search_type="album"	
+                        query+="/${search_type}"
+                        ;;
+                    a)
+                        search_type="artist"
+                        query+="/${search_type}"
+                        ;;
+                    t)
+                        search_type="track"
+                        ;;
+                esac
+            fi
+            ;;
+        !('search')) echo "You aren't supposed to be here."; exit 1
+    esac
+    local temp=""
+    while [[ 1 -eq 1 ]]; do
+        case "${!i}" in
+            dl) 		dl='true';;
+            i+([0-9])) 	temp+="&index="${!i:1};;
+            l+([0-9])) 	temp+="&limit="${!i:1};;
+            *) 		break 1;;
+        esac
+        ((i++))
+    done
+    if [[ $search_type = "none" ]]; then
+        case "${!i}" in
+            @($ALIAS_RECORD)) 
+                search_type="album"	
+                query+="/${search_type}"
+                ;;
 
-			@($ALIAS_ARTIST)) 
-				search_type="artist"	
-				query+="/${search_type}"
-				;;
+            @($ALIAS_ARTIST)) 
+                search_type="artist"	
+                query+="/${search_type}"
+                ;;
 
-			@($ALIAS_TRACK)) 
-				search_type="track"
-				;;
-			*) 
-				printf "Search type not specified. Exiting..."
-				exit 1
-				;;
-		esac
-		((i++))
-	fi
-	if [[ $verbose -gt 0 ]]; then
-		local str="Query: <${search_type}> where"
-		if ! [[ $i-eq$# ]]; then
-			str="${str} where"
-		fi
-	fi
+            @($ALIAS_TRACK)) 
+                search_type="track"
+                ;;
+            *) 
+                printf "Search type not specified. Exiting..."
+                exit 1
+                ;;
+        esac
+        ((i++))
+    fi
+    if [[ $verbose -gt 0 ]]; then
+        local str="Query: <${search_type}> where"
+        if ! [[ $i-eq$# ]]; then
+            str="${str} where"
+        fi
+    fi
 
-	query+="$temp?q="
-	local query_text=""; local query_type
-	local prefix
-	while [[ $i -lt $(($#+1)) ]]; do
-		unset prefix
-		case "${!i}" in
-			@($ALIAS_TRACK)) 
-				query_type="track"
-				;;
-			@($ALIAS_RECORD)) 
-				query_type="album"
-				;;
-			@($ALIAS_ARTIST)) 
-				query_type="artist"
-				;;
-			@(label|bpm_min|bpm_max|dur_min|dur_max)) 
-				query_type=${!i};;
-			*)
-				if [[ $query_text = "" ]]; then
-					query_type="$search_type"
-					((i--))
-				else
-					printf "Unrecognized filter type \"${!i}\". Exiting..." 
-					exit 0
-				fi
-				;;
-		esac; ((i++))
-		if [ -z ${prefix+x} ]; then
-			prefix="$query_type:"
-		fi
-		query_text=$(parse_until $i "$QUERY_TYPES_INT|$QUERY_TYPES_STR" $@) || i=$?;
-		if [[ "$query_type" = @($QUERY_TYPES_STR) ]]; then
-			query_text=\"$query_text\"
-		fi
-		if [[ $verbose -gt 0 ]]; then
-			str+=" [${query_type}=${query_text}]"
-		fi
-		query+="$prefix$query_text"
+    query+="$temp?q="
+    local query_text=""; local query_type
+    local prefix
+    while [[ $i -lt $(($#+1)) ]]; do
+        unset prefix
+        case "${!i}" in
+            @($ALIAS_TRACK)) 
+                query_type="track"
+                ;;
+            @($ALIAS_RECORD)) 
+                query_type="album"
+                ;;
+            @($ALIAS_ARTIST)) 
+                query_type="artist"
+                ;;
+            @(label|bpm_min|bpm_max|dur_min|dur_max)) 
+                query_type=${!i};;
+            *)
+                if [[ $query_text = "" ]]; then
+                    query_type="$search_type"
+                    ((i--))
+                else
+                    printf "Unrecognized filter type \"${!i}\". Exiting..." 
+                    exit 0
+                fi
+                ;;
+        esac; ((i++))
+        if [ -z ${prefix+x} ]; then
+            prefix="$query_type:"
+        fi
+        query_text=$(parse_until $i "$QUERY_TYPES_INT|$QUERY_TYPES_STR" $@) || i=$?;
+        if [[ "$query_type" = @($QUERY_TYPES_STR) ]]; then
+            query_text=\"$query_text\"
+        fi
+        if [[ $verbose -gt 0 ]]; then
+            str+=" [${query_type}=${query_text}]"
+        fi
+        query+="$prefix$query_text"
 
-		if [[ ${i} -lt $(($#+1)) ]]; then query+="%20"; fi
-	done
+        if [[ ${i} -lt $(($#+1)) ]]; then query+="%20"; fi
+    done
 
-	if [[ $verbose -gt 0 ]]; then
-		echo ${str//%20/ }
-	fi
-	echo $query
-	SEARCH_QUERY "$search_type" "$query"
+    if [[ $verbose -gt 0 ]]; then
+        echo ${str//%20/ }
+    fi
+    echo $query
+    SEARCH_QUERY "$search_type" "$query"
 
-	if [[ "$dl" = 'false' ]]; then 
-		exit 0
-	fi
+    if [[ "$dl" = 'false' ]]; then 
+        exit 0
+    fi
 }
 
 dl_parse_single () {
-	local num_p='[0-9]?([0-9])'
-	local ran_p=$num_p-$num_p
-	local val=""
-	local input=$1
-	local negate=0
-	local retval=0
-	if [[ ${input:0:1} = "!" ]]; then 
-		negate=1
-		input=${input:1}
-	fi
-	case $input in
-		$num_p)
-			local num=$input; ((num--))
-			local link=${dl_id[$num]}
-			if [[ $negate -eq 1 ]]; then
-				val+=" !$link"
-			else
-				val+=" $link"
-			fi
-			;;
-		"@")
-			for link in "${dl_id[@]}"; do
-				if [[ $negate -eq 1 ]]; then
-					val+=" !$link"
-				else
-					val+=" $link"
-				fi
-			done
-			;;
-		$ran_p)
-			#parse
-			local init; init=$(parse_2_digit ${input:0:2})
-			local dex=$((2+$?)); ((init--))
-			local end=$(parse_2_digit ${input:$dex:$((2+dex))})
-			dex=$init
+    local num_p='[0-9]?([0-9])'
+    local ran_p=$num_p-$num_p
+    local val=""
+    local input=$1
+    local negate=0
+    local retval=0
+    if [[ ${input:0:1} = "!" ]]; then 
+        negate=1
+        input=${input:1}
+    fi
+    case $input in
+        $num_p)
+            local num=$input; ((num--))
+            local link=${dl_id[$num]}
+            if [[ $negate -eq 1 ]]; then
+                val+=" !$link"
+            else
+                val+=" $link"
+            fi
+            ;;
+        "@")
+            for link in "${dl_id[@]}"; do
+                if [[ $negate -eq 1 ]]; then
+                    val+=" !$link"
+                else
+                    val+=" $link"
+                fi
+            done
+            ;;
+        $ran_p)
+            #parse
+            local init; init=$(parse_2_digit ${input:0:2})
+            local dex=$((2+$?)); ((init--))
+            local end=$(parse_2_digit ${input:$dex:$((2+dex))})
+            dex=$init
 
-			#dl
-			while [[ $dex -lt $end ]]; do
-				local link=${dl_id[$dex]}
-				if [[ $negate -eq 1 ]]; then
-					val+=" !$link"
-				else
-					val+=" $link"
-				fi
-				((dex++))
-			done
-			;;
-		*)
-			val+=" ERROR"
-			retval=1
-			;;
-	esac
-	echo $val
-	exit $retval
+            #dl
+            while [[ $dex -lt $end ]]; do
+                local link=${dl_id[$dex]}
+                if [[ $negate -eq 1 ]]; then
+                    val+=" !$link"
+                else
+                    val+=" $link"
+                fi
+                ((dex++))
+            done
+            ;;
+        *)
+            val+=" ERROR"
+            retval=1
+            ;;
+    esac
+    echo $val
+    exit $retval
 }
 
 dl_parse_list () {
-	local dls=""
-	local dex=1
-	local retval=0
-	while [[ $dex -lt $((1+$#)) ]]; do
-		dls+=" $(dl_parse_single ${!dex})"
-		if [[ $? -eq 1 ]]; then
-			retval=1
-		fi
-		((dex++))
-	done
-	echo $dls
-	exit $retval
+    local dls=""
+    local dex=1
+    local retval=0
+    while [[ $dex -lt $((1+$#)) ]]; do
+        dls+=" $(dl_parse_single ${!dex})"
+        if [[ $? -eq 1 ]]; then
+            retval=1
+        fi
+        ((dex++))
+    done
+    echo $dls
+    exit $retval
 }
 
 dl_single () {
-	if [[ "$1" = *"deezer.com"* ]]; then
-		if [[ $verbose -gt 1 ]]; then
-			local id=${1##https://www.deezer.com/*/}
-			echo "Starting download: $id"; 
-			if [[ $verbose -gt 2 ]]; then pipe=1; else pipe="/dev/null"; fi	
-		fi	
-		alacritty -e deemix -p "$LIBRARY_DIR" "$1"
-	fi
+    if [[ "$1" = *"deezer.com"* ]]; then
+        if [[ $verbose -gt 1 ]]; then
+            local id=${1##https://www.deezer.com/*/}
+            echo "Starting download: $id"; 
+            if [[ $verbose -gt 2 ]]; then pipe=1; else pipe="/dev/null"; fi	
+        fi	
+        alacritty -e deemix -p "$LIBRARY_DIR" "$1"
+    fi
 }
 
 dl_list () {
-	for str in "$@"; do
-		dl_single $str &
-	done
+    for str in "$@"; do
+        dl_single $str &
+    done
 }
 
 
 download () {
-	if [[ "$1" = +(?)" "+(?) ]]; then
-		dl_list $1
-	else
-		dl_single $1
-	fi
+    if [[ "$1" = +(?)" "+(?) ]]; then
+        dl_list $1
+    else
+        dl_single $1
+    fi
 }
 
 DL_PROMPT () {
-	dl_input="$1"
-	if [[ $dl_input = *( ) ]]; then
-		printf "	$(italic "CHEAT SHEET: a b-c !d @")\n"
-		printf "Download which?		'ENTER' for all; 'CTRL-C' to cancel; 'h' for help\n"
-		read dl_input
-		if [[ $dl_input = *( ) ]]; then dl_input="@"; fi
-	fi
-	if [[ $dl_input = *( )@(h|help)*( ) ]]; then
-		printf "   Enter the indices of the results you'd like to download, \n in the form of a space-separated list. \n\n"
-		printf "	   $(bold "SHORTHAND\n	SYNTAX		USAGE		EXAMPLE\n")"
-		printf "	'x'	number		'9 10 21' downloads the 9th, 10th, and 21st search result.\n"
-		printf "       'x-y'	range		'1-10' downloads the top 10 search results.\n"
-		printf "        '!x'	negation	'@ !13 !4' downloads all but the 4th and 13th search results.\n"
-		printf "	'@'	everything	'@' downloads all search results.\n\n"
-		printf "	$(bold "TIPS")\n"
-		printf "	  • Shorthand can compound to meet most tasks. For example: \n"
-		printf "	     '@ !2-4' downloads all results except the 2nd, 3rd, and 4th.\n"
-		printf "	  • If you didn't find what you were looking for, you can always use 'CTRL-C' to quit.\n"
-		printf "	  • Reminders for the shorthand are shown on the download prompt. \n"
-		printf "\n"
-		DL_PROMPT
-	fi
+    dl_input="$1"
+    if [[ $dl_input = *( ) ]]; then
+        printf "	$(italic "CHEAT SHEET: a b-c !d @")\n"
+        printf "Download which?		'ENTER' for all; 'CTRL-C' to cancel; 'h' for help\n"
+        read dl_input
+        if [[ $dl_input = *( ) ]]; then dl_input="@"; fi
+    fi
+    if [[ $dl_input = *( )@(h|help)*( ) ]]; then
+        PRINT_HELP_SEC 'dl'; echo ""
+        DL_PROMPT
+    fi
 }
 
 get_config_folder () {
-	if ! [ -z "$HOME" ]; then
-		echo "$HOME/.config"
-		exit 0
-	else
-		echo "."
-		exit 0
-	fi
+    if ! [ -z "$HOME" ]; then
+        echo "$HOME/.config"
+        exit 0
+    else
+        echo "."
+        exit 0
+    fi
 }
 
 if [[ $# -eq 0 ]] || [[ "$1" =~ ^(h|-h|--h|help|-help|--help)$ ]]; then
-	PRINT_HELP ${@:1}
-	exit 0
+    PRINT_HELP ${@:1}
+    exit 0
 fi
 
 
 if [ -f ./bipp.conf ]; then
-	printf "Using config from program directory [$PWD] \n"
-	. ./bipp.conf
+    printf "Using config from program directory [$PWD] \n"
+    . ./bipp.conf
 else
-	CONFIG_FOLDER=$(get_config_folder)
-	if [ -f "$CONFIG_FOLDER/bipp/bipp.conf" ]; then
-	printf "Using config from user config directory [$HOME/.config/bipp.conf]\n"
-	. "$CONFIG_FOLDER/bipp/bipp.conf"
-	else
-		printf "No config found. Proceeding without\n"
-	fi
+    CONFIG_FOLDER=$(get_config_folder)
+    if [ -f "$CONFIG_FOLDER/bipp/bipp.conf" ]; then
+        printf "Using config from user config directory [$HOME/.config/bipp.conf]\n"
+        . "$CONFIG_FOLDER/bipp/bipp.conf"
+    else
+        printf "No config found. Proceeding without\n"
+    fi
 fi
 
 if [ -z "$LIBRARY_DIR" ]; then 
-	if command -v xdg-user-dir; then
-		LIBRARY_DIR="$(xdg-user-dir MUSIC)"
-	else
-		LIBRARY_DIR="$HOME/Music"
-	fi
-	LIBRARY_DIR+="/bipp-music/"
+    if command -v xdg-user-dir; then
+        LIBRARY_DIR="$(xdg-user-dir MUSIC)"
+    else
+        LIBRARY_DIR="$HOME/Music"
+    fi
+    LIBRARY_DIR+="/bipp-music/"
 else
-	LIBRARY_DIR="${LIBRARY_DIR//\~/$HOME}"
+    LIBRARY_DIR="${LIBRARY_DIR//\~/$HOME}"
 fi
 
 verbose=2
@@ -548,58 +585,58 @@ dl='false'
 
 while getopts p:P:v:V flag 
 do
-	case "${flag}" in
-		V) 
-			printf "\n  $(bold "bipp version:") ${BIPP_VER} alpha"
-			printf "\n $(italic '"i can make you feel better!"')\n"
-			exit 0;;
-		v) verbose=${OPTARG} 
-			shift 2;;
-		p) LIBRARY_DIR="${OPTARG}/bipp_music/"
-			shift 2;;
-		P) LIBRARY_DIR="${OPTARG}/"
-			shift 2;;
-		*) echo 'Error in command line parsing' >&2
-			exit 1
-	esac
+    case "${flag}" in
+        V) 
+            printf "\n  $(bold "bipp version:") ${BIPP_VER} alpha"
+            printf "\n $(italic '"i can make you feel better!"')\n"
+            exit 0;;
+        v) verbose=${OPTARG} 
+            shift 2;;
+        p) LIBRARY_DIR="${OPTARG}/bipp_music/"
+            shift 2;;
+        P) LIBRARY_DIR="${OPTARG}/"
+            shift 2;;
+        *) echo 'Error in command line parsing' >&2
+            exit 1
+    esac
 done
 
 if [[ $# -gt 0 ]]
 then
-	case $1 in
-		$S_PATTERN)
-			;&
-		"search")
-			SEARCH $@
-			;;
-		*)
-			printf "Unrecognized command \"$1\". Exiting...\n"
-			exit 1
+    case $1 in
+        $S_PATTERN)
+            ;&
+        "search")
+            SEARCH $@
+            ;;
+        *)
+            printf "Unrecognized command \"$1\". Exiting...\n"
+            exit 1
 
-	esac
+    esac
 fi
 
 echo ""
 if ! [[ $dl = 'false' ]]
 then
-	DL_PROMPT
-	clip=$(dl_parse_list $dl_input)
-	while [[ $? -eq 1 ]]; do
-		printf "Could not parse input \'$dl_input\'. \n\n"
-		DL_PROMPT 'h'
-		clip=$(dl_parse_list $dl_input)
-	done
-	for link in ${clip}; do
-		if [[ ${link:0:1} = '!' ]]; then
-			clip=${clip//$link/}
-			clip=${clip//${link:1}/}
-		fi	
-	done
-	if [[ $clip = *( ) ]]; then
-		printf "No downloads selected. Exiting... \n"
-	else
-		printf "Downloading searched data... \n"
-		dl_list $clip
-	fi
-	exit 0
+    DL_PROMPT
+    clip=$(dl_parse_list $dl_input)
+    while [[ $? -eq 1 ]]; do
+        printf "Could not parse input \'$dl_input\'. \n\n"
+        DL_PROMPT 'h'
+        clip=$(dl_parse_list $dl_input)
+    done
+    for link in ${clip}; do
+        if [[ ${link:0:1} = '!' ]]; then
+            clip=${clip//$link/}
+            clip=${clip//${link:1}/}
+        fi	
+    done
+    if [[ $clip = *( ) ]]; then
+        printf "No downloads selected. Exiting... \n"
+    else
+        printf "Downloading searched data... \n"
+        dl_list $clip
+    fi
+    exit 0
 fi
