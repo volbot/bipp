@@ -95,52 +95,8 @@ volcurl () {
     echo $json
 }
 
-PRINT_LOGO () {
-    printf "$(bold "✴")"
-    printf "$(italic "$(decor 3)")"
-    printf "$(bold "|‾|")"
-    printf "$(italic "$(decor 3)")"
-    printf "$(bold "_")"
-    printf "$(italic "$(decor 39)")"
-    printf "$(bold "✴\n")"
-
-    printf "$(bold "    | |  /_\           \n")"
-    printf "$(bold "    | |_  _ __ _ __ _	   ")$(italic "package manager for\n")"
-    printf "$(bold "    | '_ \ | '_ \ '_ \ 	   ")$(italic "your music library.\n")"
-    printf "$(bold "    |_.__/_| .__/ .__/ 	   ")$(italic "with <3, allomyrina\n")"
-    printf "$(bold "           | |  | |     \n")"
-
-    printf "$(bold "✴")"
-    printf "$(italic "$(decor 10)")"
-    printf "$(bold "|_|")"
-    printf "$(italic "$(decor 2)")"
-    printf "$(bold "|_|")"
-    printf "$(italic "$(decor 31)")"
-    printf "$(bold "✴\n")"
-}
-
 PRINT_HELP_SEC () {
-    case $1 in
-        bipp)
-            printf "                   ┌─────────────────────────┐\n"
-            printf " ┌─────────────────┤$(italic '$bipp help bipp') to repeat│\n"
-            printf " │                 └─────────────────────────┘\n"  
-            printf " b   $(bold 'USAGE: bipp [')$(bold_italic 'BIPP_ARGS')$(bold '] ')$(bold_italic '<command>')$(bold ' [')$(bold_italic 'COMMAND_PARAMS')$(bold ']') \n i\n"
-            printf " p     $(bold '-//BIPP_ARGS//-') \n"
-            printf " p   $(bold '-V') $(decor_fancy 16) print version and exit \n"
-            printf " │   $(bold '-p|P <path>') $(decor_fancy 7) specify download location \n"
-            printf " │                            lowercase to generate <path>/bipp_music/ \n"
-            printf " │   $(bold '-v <verbosity>') $(decor_fancy 4) specify amount of output \n"
-            printf " │                            0 = silent \n"
-            printf " │                            1 = command output only \n"
-            printf " │                            2 = deemix progress \n"
-            printf " │                            3 = everything \n │ \n"
-            printf " │     $(bold '-//COMMANDS//-') \n"
-            printf " │   $(bold 'h|help [section]') $(decor_fancy 4) print help dialog, or help section if specified \n"
-            printf " │                              sections: $(italic 'bipp')|$(italic 'search')|$(italic 'alias')|$(italic 'ex')|$(italic 'dl') \n"
-            printf " │   $(bold 'search') $(decor_fancy 14) search for, and optionally download, remote music. \n"
-            printf " └                              $(italic '$bipp help search') for more info \n"
-            ;;
+    case "$1" in
         search)
             printf "                      ┌───────────────────────────┐\n"
             printf " ┌──────$(bold '//SEARCH//')────┤$(italic '$bipp help search') to repeat│\n"
@@ -157,16 +113,16 @@ PRINT_HELP_SEC () {
             printf " │                   ex: bipp st $(italic "album Beam Me Up Scotty artist gucci") \n"
             printf " └                      displays tracks by Gucci Mane on albums called Beam Me Up Scotty \n"
             ;;
-        alias)
-            printf "                       ┌──────────────────────────┐\n"
-            printf " ┌──────$(bold '//ALIASES//')────┤$(italic '$bipp help alias') to repeat│\n"
-            printf " │                     └──────────────────────────┘\n"  
+        aliases)
+            printf "                       ┌────────────────────────────┐\n"
+            printf " ┌──────$(bold '//ALIASES//')────┤$(italic '$bipp help aliases') to repeat│\n"
+            printf " │                     └────────────────────────────┘\n"  
             printf " a   $(bold "$ALIAS_RECORD") $(decor_fancy 4) record \n"
             printf " l   $(bold "$ALIAS_ARTIST") $(decor_fancy 10) artist \n"
             printf " i   $(bold "$ALIAS_TRACK") $(decor_fancy 11) track \n"
-            printf " a   $(bold "$ALIAS_LABEL") $(decor_fancy 11) label \n │\n"
-            printf " s   $(bold '<s|S>[r|a|t]') $(decor_fancy 6) shorthand for $(bold 'search [')$(bold_italic 'dl')$(bold '] <')$(bold_italic 'type')$(bold '>')\n"
-            printf " │                            usage:\n"
+            printf " a   $(bold "$ALIAS_LABEL") $(decor_fancy 11) label \n s\n"
+            printf " e   $(bold '<s|S>[r|a|t]') $(decor_fancy 6) shorthand for $(bold 'search [')$(bold_italic 'dl')$(bold '] <')$(bold_italic 'type')$(bold '>')\n"
+            printf " s                            usage:\n"
             printf " │                               s|S $(decor_fancy 6) dl (caps for true) \n"
             printf " │                               r|a|t $(decor_fancy 4) search type (see above) \n"
             printf " │                         ex: bipp $(italic 'sr') 100 gecs\n"
@@ -174,56 +130,96 @@ PRINT_HELP_SEC () {
             printf " │                         ex: bipp $(italic 'St') artist Ana Frango\n"
             printf " └                            downloads tracks by artist \"Ana Frango\"\n"
             ;;
-        ex)
-            printf "                        ┌───────────────────────┐\n"
-            printf " ┌──────$(bold '//EXAMPLES//')────┤$(italic '$bipp help ex') to repeat│\n"
-            printf " │                      └───────────────────────┘\n"  
+        examples)
+            printf "                        ┌─────────────────────────────┐\n"
+            printf " ┌──────$(bold '//EXAMPLES//')────┤$(italic '$bipp help examples') to repeat│\n"
+            printf " │                      └─────────────────────────────┘\n"  
             printf " e   $(italic '$bipp search track BIPP artist SOPHIE') \n"
             printf " x   $(italic '↳bipp st BIPP a SOPHIE') \n"
-            printf " │      displays songs called BIPP by SOPHIE \n │\n"
-            printf " │   $(italic '$bipp search dl track artist MC Boing album Harlecore') \n"
-            printf " │   $(italic '↳bipp St a MC Boing r Harlecore') \n"
-            printf " │      downloads songs by MC Boing on albums called Harlecore \n │\n"
+            printf " a      displays songs called BIPP by SOPHIE \n m\n"
+            printf " p   $(italic '$bipp search dl track artist MC Boing album Harlecore') \n"
+            printf " l   $(italic '↳bipp St a MC Boing r Harlecore') \n"
+            printf " e      downloads songs by MC Boing on albums called Harlecore \n s\n"
             printf " │   $(italic '$bipp -v 0 search dl artist Frank Ocean label Blonded \n')"
             printf " │   $(italic '↳bipp -v 0 Sa Frank Ocean l Blonded \n')"
             printf " └      silently downloads music by Frank Ocean, published by Blonded \n"
             ;;
-        dl)
-            printf "                         ┌───────────────────────┐\n"
-            printf " ┌──────$(bold '//SEARCH-DL//')────┤$(italic '$bipp help dl') to repeat│\n"
-            printf " │                       └───────────────────────┘\n"  
-            printf " d   Enter the indices of the results you'd like to download\n"
-                printf " l   in the form of a space-separated list. \n │\n"
-            printf " │       $(bold 'SHORTHAND')\n"
-            printf " │    $(bold 'SYNTAX       USAGE             EXAMPLE')\n"
-            printf " │   'x' $(decor_fancy 6) number $(decor_fancy 8) '9 10 21' downloads the 9th, 10th, and 21st search result.\n"
-            printf " │   'x-y' $(decor_fancy 4) range $(decor_fancy 9) '1-10' downloads the top 10 search results.\n"
+        search_dl)
+            printf "                         ┌──────────────────────────────┐\n"
+            printf " ┌──────$(bold '//SEARCH-DL//')────┤$(italic '$bipp help search-dl') to repeat│\n"
+            printf " │                       └──────────────────────────────┘\n"  
+            printf " s   Enter the indices of the results you'd like to download\n"
+            printf " e   in the form of a space-separated list. \n │\n"
+            printf " a       $(bold 'SHORTHAND')\n"
+            printf " r    $(bold 'SYNTAX       USAGE             EXAMPLE')\n"
+            printf " c   'x' $(decor_fancy 6) number $(decor_fancy 8) '9 10 21' downloads the 9th, 10th, and 21st search result.\n"
+            printf " h   'x-y' $(decor_fancy 4) range $(decor_fancy 9) '1-10' downloads the top 10 search results.\n"
             printf " │   '!x' $(decor_fancy 5) negation $(decor_fancy 6) '@ !13 !4' downloads all but the 4th and 13th search results.\n"
-            printf " │   '@' $(decor_fancy 6) everything $(decor_fancy 4) '@' downloads all search results.\n │\n"
+            printf " d   '@' $(decor_fancy 6) everything $(decor_fancy 4) '@' downloads all search results.\n l\n"
             printf " │       $(bold "TIPS")\n"
             printf " │   • Shorthand can compound to meet most tasks. For example, \n"
             printf " │       '@ !2-4' downloads all results except the 2nd, 3rd, and 4th.\n"
             printf " │   • If you didn't find what you were looking for, you can always use 'CTRL-C' to quit.\n"
             printf " └   • Reminders for the shorthand are shown on the download prompt. \n"
-            printf "\n"
+            ;;
+        logo)
+            printf "$(bold "✴")"
+            printf "$(italic "$(decor 3)")"
+            printf "$(bold "|‾|")"
+            printf "$(italic "$(decor 3)")"
+            printf "$(bold "_")"
+            printf "$(italic "$(decor 39)")"
+            printf "$(bold "✴\n")"
+            printf "$(bold "    | |  /_\           \n")"
+            printf "$(bold "    | |_  _ __ _ __ _	   ")$(italic "package manager for\n")"
+            printf "$(bold "    | '_ \ | '_ \ '_ \ 	   ")$(italic "your music library.\n")"
+            printf "$(bold "    |_.__/_| .__/ .__/ 	   ")$(italic "with <3, allomyrina\n")"
+            printf "$(bold "           | |  | |     \n")"
+            printf "$(bold "✴")"
+            printf "$(italic "$(decor 10)")"
+            printf "$(bold "|_|")"
+            printf "$(italic "$(decor 2)")"
+            printf "$(bold "|_|")"
+            printf "$(italic "$(decor 31)")"
+            printf "$(bold "✴\n")"
+            ;;
+        *)
+            printf "  $(bold 'USAGE: bipp [')$(bold_italic 'BIPP_ARGS')$(bold '] ')$(bold_italic '<command>')$(bold ' [')$(bold_italic 'COMMAND_PARAMS')$(bold ']') \n\n"
+            printf "    $(bold '-//BIPP_ARGS//-') \n"
+            printf "  $(bold '-V') $(decor_fancy 16) print version and exit \n"
+            printf "  $(bold '-p|P <path>') $(decor_fancy 7) specify download location \n"
+            printf "                           lowercase to generate <path>/bipp_music/ \n"
+            printf "  $(bold '-v <verbosity>') $(decor_fancy 4) specify amount of output \n"
+            printf "                           0 = silent \n"
+            printf "                           1 = command output only \n"
+            printf "                           2 = deemix progress \n"
+            printf "                           3 = everything \n\n"
+            printf "    $(bold '-//COMMANDS//-') \n"
+            printf "  $(bold 'h|help [section]') $(decor_fancy 4) print help dialog, or help section if specified \n"
+            printf "                             sections: $(italic 'bipp')|$(italic 'search')|$(italic 'search-dl')|$(italic 'aliases')|$(italic 'examples')|$(italic 'all') \n"
+            printf "  $(bold 'search') $(decor_fancy 14) search for, and optionally download, remote music. \n"
+            printf "                             $(italic '$bipp help search') for more info \n"
             ;;
     esac
 }
 
 PRINT_HELP () {
-    
-    PRINT_LOGO; echo ""
-    
-    if [[ "$2" = @(bipp|search|alias|ex|dl) ]]; then
-            PRINT_HELP_SEC "$2"; echo ""
-            exit 0
+    if [[ $# -lt 3 ]]; then
+        PRINT_HELP_SEC 'logo'
+        printf "\n"
+        PRINT_HELP_SEC
+        printf "\n"
+        exit 0
     fi
 
-    PRINT_HELP_SEC 'bipp'; echo ""
-    PRINT_HELP_SEC 'search'; echo ""
-    PRINT_HELP_SEC 'ex'; echo ""
-
-    printf "\n"
+    local T=$((1+$#))
+    for ((i=3;i<$((1+$#));i++)); do
+       case ${!i} in
+           all) PRINT_HELP '' '' 'logo' 'bipp' 'search' 'search_dl' 'aliases' 'examples';; 
+           *) PRINT_HELP_SEC ${!i};;
+       esac
+       printf "\n"
+    done
 }
 
 get_search_string () {
@@ -551,7 +547,7 @@ get_config_folder () {
 }
 
 if [[ $# -eq 0 ]] || [[ "$1" =~ ^(h|-h|--h|help|-help|--help)$ ]]; then
-    PRINT_HELP ${@:1}
+    PRINT_HELP 'logo' ${@:1}
     exit 0
 fi
 
